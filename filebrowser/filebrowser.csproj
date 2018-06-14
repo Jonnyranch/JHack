@@ -67,6 +67,7 @@
   <ItemGroup>
     <Compile Include="ApiLoginOperations.cs" />
     <Compile Include="crypto.cs" />
+    <Compile Include="Dictionary.cs" />
     <Compile Include="directory.cs" />
     <Compile Include="Client.cs">
       <SubType>Form</SubType>

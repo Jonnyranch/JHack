@@ -389,6 +389,9 @@ namespace filebrowser
 
     class crypto_symmetric
     {
+        Dictionary keys = new Dictionary();
+        md5 hash = new md5();
+
         //Method to encrypt files with symetric aes
         public void symetrEncrypt(string fileInputPath, string fileOutputPath, string fileOutputKeyPath, string fileOutputIVPath)
         {
@@ -396,20 +399,15 @@ namespace filebrowser
             {
                 using (RijndaelManaged RMCrypto = new RijndaelManaged())
                 {
-                    //ToDo crypt key & IV with rsa and save into a HashMap
+                    RMCrypto.KeySize = 256;
+                    RMCrypto.BlockSize = 256;
+                    
                     RMCrypto.GenerateKey();
-                    string Key = Convert.ToBase64String(RMCrypto.Key);
-                    RMCrypto.GenerateIV();
-                    string IV = Convert.ToBase64String(RMCrypto.IV);
-
-                    //Create file for Key & IV 
-                    File.WriteAllText(fileOutputKeyPath, Key);
-                    File.WriteAllText(fileOutputIVPath, IV);
 
                     //Create file for new crypt document 
                     using (FileStream fsCrypt = new FileStream(fileOutputPath, FileMode.Create))
                     {
-                        using (ICryptoTransform encryptor = RMCrypto.CreateEncryptor(RMCrypto.Key, RMCrypto.IV))
+                        using (ICryptoTransform encryptor = RMCrypto.CreateEncryptor(RMCrypto.Key, RMCrypto.Key))
                         {
                             //new CryptoStream to stream a file like a filestream but used for crypto data 
                             using (CryptoStream cs = new CryptoStream(fsCrypt, encryptor, CryptoStreamMode.Write))
@@ -426,11 +424,15 @@ namespace filebrowser
                             }
                         }
                     }
+
+                    //ToDo crypt the Key with rsa
+                    //add the asymetric key to the hashmap
+                    keys.add(hash.buildmd5(fileOutputPath), Convert.ToBase64String(RMCrypto.Key));
                 }
 
                 //ToDo Logging
             }
-            catch
+            catch (Exception ex)
             {
                 //ToDO logging
                 //Inform the user that an exception was raised.  
@@ -444,10 +446,14 @@ namespace filebrowser
             {
                 using (RijndaelManaged aes = new RijndaelManaged())
                 {
+                    aes.KeySize = 256;
+                    aes.BlockSize = 256;
                     //Read aes keys
                     //ToDo implement a Hashmap or Dictionary in C#
-                    byte[] Key = Convert.FromBase64String(getKey(@"C:\crypto\aeskeys\Key.txt"));
-                    byte[] IV = Convert.FromBase64String(getKey(@"C:\crypto\aeskeys\IV.txt"));
+                    //byte[] Key = Convert.FromBase64String(getKey(@"C:\crypto\aeskeys\Key.txt"));
+                    //byte[] IV = Convert.FromBase64String(getKey(@"C:\crypto\aeskeys\IV.txt"));
+                    string key = keys.find(hash.buildmd5(fileInputPath));
+                    byte[] KeyHash = Convert.FromBase64String(key);
 
                     //Read exist crypted file 
                     using (FileStream fsCrypt = new FileStream(fileInputPath, FileMode.Open))
@@ -455,7 +461,7 @@ namespace filebrowser
                         //New filestream to save the decrypted file as a new file
                         using (FileStream fsOut = new FileStream(fileOutputPath, FileMode.Create))
                         {
-                            using (ICryptoTransform decryptor = aes.CreateDecryptor(Key, IV))
+                            using (ICryptoTransform decryptor = aes.CreateDecryptor(KeyHash, KeyHash))
                             {
                                 //read encrypted file and save it in a new file withe the same name 
                                 using (CryptoStream cs = new CryptoStream(fsCrypt, decryptor, CryptoStreamMode.Read))
@@ -505,4 +511,28 @@ namespace filebrowser
 
     }
 
+    class md5
+    {
+        //Build a MD5 Hash of a file and return it as string
+        public string buildmd5(string filePath)
+        {
+            try
+            {
+                using (var md5 = MD5.Create())
+                {
+                    using (var stream = File.OpenRead(filePath))
+                    {
+                        var hash = md5.ComputeHash(stream);
+                        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                    }
+                }
+            }
+
+            catch (Exception ex)
+            {
+                //ToDo Loggin
+                return null;
+            }
+        }
+    }
 }
