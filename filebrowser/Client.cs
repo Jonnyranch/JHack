@@ -145,7 +145,7 @@ namespace filebrowser
                     //ToDo save key und iv in hashmap
                     foreach (ListViewItem item in listView1.SelectedItems)
                     {
-                        symcrypt.symetrEncrypt(@"C:\crypto\decrypted\" + item.Text, @"C:\crypto\encrypted\" + item.Text, @"C:\crypto\aeskeys\Key.txt", @"C:\crypto\aeskeys\IV.txt");
+                        symcrypt.symetrEncrypt(@"C:\crypto\decrypted\" + item.Text, @"C:\crypto\encrypted\" + item.Text);
                         File.Delete(@"C:\crypto\decrypted\" + item.Text);
                     }
                     MessageBox.Show("Encrypt File", "Success");

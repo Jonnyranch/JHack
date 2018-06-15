@@ -28,12 +28,11 @@
  * symetrDecrypt() decrypt a aes file with the private key and store the new file to the given path
          * @param string fileInputPath
          * @param string fileOutputPath
-* 
- * getKey() get the aes key from a file 
-         * @param string fileInputKeyPath
  *
- * getIV() get the aes IV from a file
-         * @param string fileInputIVPath
+ * The class md5 has only one function. Building a md5 Hash of a file 
+ *
+ * buildmd5() build the md5 hash and bring it back 
+         * @param string filePath
  **/
 
 using System;
@@ -144,244 +143,62 @@ namespace filebrowser
         }
 
         // Encrypt a rsa file
-        public static void Encrypt(string publicKeyFileName, string plainFileName, string encryptedFileName)
+        public static string Encrypt(byte[] decryptedKey)
 
         {
-
-            // Variables
-
-            CspParameters cspParams = null;
-
-            RSACryptoServiceProvider rsaProvider = null;
-
-            StreamReader publicKeyFile = null;
-
-            StreamReader plainFile = new StreamReader(@"C:\crypto\decrypted\" + plainFileName);
-
-            FileStream encryptedFile = null;
-
-            string publicKeyText = "";
-
-            string plainText = "";
-
-            byte[] plainBytes = null;
-
-            byte[] encryptedBytes = null;
-
-
             try
 
             {
 
-                // Select target CSP
-
-                cspParams = new CspParameters();
-
+                CspParameters cspParams = new CspParameters();
                 cspParams.ProviderType = 1; // PROV_RSA_FULL
+                RSACryptoServiceProvider provider = new RSACryptoServiceProvider(cspParams);
+                StreamReader publicKeyFile = File.OpenText(@"C:\crypto\rsakeys\" + System.Environment.MachineName + ".pub");
+                string publicKeyText = publicKeyFile.ReadToEnd();
+                publicKeyFile.Close();
+                provider.FromXmlString(publicKeyText);
+                byte[] encryptedKeyByte = provider.Encrypt(decryptedKey, false);
+                string encryptedKey = Convert.ToBase64String(encryptedKeyByte);
 
-                //cspParams.ProviderName; // CSP name
-
-                rsaProvider = new RSACryptoServiceProvider(cspParams);
-
-
-                // Read public key from file
-
-                publicKeyFile = File.OpenText(@"C:\crypto\rsakeys\" + publicKeyFileName);
-
-                publicKeyText = publicKeyFile.ReadToEnd();
-
-
-                // Import public key
-
-                rsaProvider.FromXmlString(publicKeyText);
-
-
-                // Read plain file 
-                // ToDo Read file and convert it into byte array 
-
-                plainText = plainFile.ReadToEnd();
-
-
-                // Encrypt plain file
-
-                plainBytes = Encoding.Unicode.GetBytes(plainText);
-
-                encryptedBytes = rsaProvider.Encrypt(plainBytes, false);
-
-
-                // Write encrypted text to file
-
-                encryptedFile = File.Create(encryptedFileName);
-
-                encryptedFile.Write(encryptedBytes, 0, encryptedBytes.Length);
-
-                //ToDo Logging 
+                return encryptedKey;
             }
 
             catch (Exception ex)
 
             {
                 //ToDo Logging
-                // Any errors? Show them
-                Console.WriteLine(ex.Message);
+                return null;
 
             }
-
-            finally
-
-            {
-
-                // Do some clean up if needed
-
-                if (publicKeyFile != null)
-
-                {
-
-                    publicKeyFile.Close();
-
-                }
-
-                if (plainFile != null)
-
-                {
-
-                    plainFile.Close();
-
-                }
-
-                if (encryptedFile != null)
-
-                {
-
-                    encryptedFile.Close();
-
-                }
-
-            }
-
-
         }
-
+        
         // Decrypt a rsa file
-        public static void Decrypt(string privateKeyFileName, string encryptedFileName, string plainFileName)
+        public static byte[] Decrypt(string encryptedKey)
 
         {
-
-            // Variables
-
-            CspParameters cspParams = null;
-
-            RSACryptoServiceProvider rsaProvider = null;
-
-            StreamReader privateKeyFile = null;
-
-            FileStream encryptedFile = null;
-
-            StreamWriter plainFile = null;
-
-            string privateKeyText = "";
-
-            string plainText = "";
-
-            byte[] encryptedBytes = null;
-
-            byte[] plainBytes = null;
-
-
             try
-
             {
-
-                // Select target CSP
-
+                //creat new CspParameter container
+                CspParameters cspParams = null;
                 cspParams = new CspParameters();
 
                 cspParams.ProviderType = 1; // PROV_RSA_FULL
-
-                //cspParams.ProviderName; // CSP name
-
-                rsaProvider = new RSACryptoServiceProvider(cspParams);
-
-
-                // Read private/public key pair from file
-
-                privateKeyFile = File.OpenText(privateKeyFileName);
-
-                privateKeyText = privateKeyFile.ReadToEnd();
-
-
-                // Import private/public key pair
-
-                rsaProvider.FromXmlString(privateKeyText);
-
-
-                // Read encrypted text from file
-
-                encryptedFile = File.OpenRead(encryptedFileName);
-
-                encryptedBytes = new byte[encryptedFile.Length];
-
-                encryptedFile.Read(encryptedBytes, 0, (int)encryptedFile.Length);
-
-
-                // Decrypt text
-
-                plainBytes = rsaProvider.Decrypt(encryptedBytes, false);
-
-
-                // Write decrypted text to file
-
-                plainFile = File.CreateText(plainFileName);
-
-                plainText = Encoding.Unicode.GetString(plainBytes);
-
-                plainFile.Write(plainText);
-
-                //ToDo Logging
-
+                RSACryptoServiceProvider provider = new RSACryptoServiceProvider(cspParams);
+                StreamReader privateKeyFile = File.OpenText(@"C:\crypto\rsakeys\" + System.Environment.MachineName + ".ppk");
+                string privateKeyText = privateKeyFile.ReadToEnd();
+                privateKeyFile.Close();
+                provider.FromXmlString(privateKeyText);
+                byte[] encryptedKeyByte = Convert.FromBase64String(encryptedKey);
+                byte[]  plainBytes = provider.Decrypt(encryptedKeyByte, false);
+                return plainBytes;
             }
-
             catch (Exception ex)
 
             {
+                return null;
                 //ToDo Logging
-                // Any errors? Show them
-                Console.WriteLine(ex.Message);
 
             }
-
-            finally
-
-            {
-
-                // Do some clean up if needed
-
-                if (privateKeyFile != null)
-
-                {
-
-                    privateKeyFile.Close();
-
-                }
-
-                if (encryptedFile != null)
-
-                {
-
-                    encryptedFile.Close();
-
-                }
-
-                if (plainFile != null)
-
-                {
-
-                    plainFile.Close();
-
-                }
-
-            }
-
 
         }
 
@@ -393,7 +210,7 @@ namespace filebrowser
         md5 hash = new md5();
 
         //Method to encrypt files with symetric aes
-        public void symetrEncrypt(string fileInputPath, string fileOutputPath, string fileOutputKeyPath, string fileOutputIVPath)
+        public void symetrEncrypt(string fileInputPath, string fileOutputPath)
         {
             try
             {
@@ -424,18 +241,15 @@ namespace filebrowser
                             }
                         }
                     }
-
-                    //ToDo crypt the Key with rsa
-                    //add the asymetric key to the hashmap
-                    keys.add(hash.buildmd5(fileOutputPath), Convert.ToBase64String(RMCrypto.Key));
+                    
+                    keys.add(hash.buildmd5(fileOutputPath), crypto.Encrypt(RMCrypto.Key));
                 }
 
                 //ToDo Logging
             }
             catch (Exception ex)
             {
-                //ToDO logging
-                //Inform the user that an exception was raised.  
+                //ToDO logging 
             }
         }
 
@@ -449,11 +263,8 @@ namespace filebrowser
                     aes.KeySize = 256;
                     aes.BlockSize = 256;
                     //Read aes keys
-                    //ToDo implement a Hashmap or Dictionary in C#
-                    //byte[] Key = Convert.FromBase64String(getKey(@"C:\crypto\aeskeys\Key.txt"));
-                    //byte[] IV = Convert.FromBase64String(getKey(@"C:\crypto\aeskeys\IV.txt"));
                     string key = keys.find(hash.buildmd5(fileInputPath));
-                    byte[] KeyHash = Convert.FromBase64String(key);
+                    byte[] decryptetKey = crypto.Decrypt(key);
 
                     //Read exist crypted file 
                     using (FileStream fsCrypt = new FileStream(fileInputPath, FileMode.Open))
@@ -461,7 +272,7 @@ namespace filebrowser
                         //New filestream to save the decrypted file as a new file
                         using (FileStream fsOut = new FileStream(fileOutputPath, FileMode.Create))
                         {
-                            using (ICryptoTransform decryptor = aes.CreateDecryptor(KeyHash, KeyHash))
+                            using (ICryptoTransform decryptor = aes.CreateDecryptor(decryptetKey, decryptetKey))
                             {
                                 //read encrypted file and save it in a new file withe the same name 
                                 using (CryptoStream cs = new CryptoStream(fsCrypt, decryptor, CryptoStreamMode.Read))
@@ -483,32 +294,8 @@ namespace filebrowser
             catch (Exception ex)
             {
                 //ToDo logging
-                // failed to decrypt file
             }
         }
-
-        //Get key from a file in a given path
-        public string getKey(string fileInputKeyPath)
-        {
-            string Key = "";
-            StreamReader srKey = new StreamReader(fileInputKeyPath);
-            Key = srKey.ReadToEnd();
-            return Key;
-
-            //ToDo Logging
-        }
-
-        //Get IV from a file in a given path
-        public string getIV(string fileInputIVPath)
-        {
-            string IV = "";
-            StreamReader srIV = new StreamReader(fileInputIVPath);
-            IV = srIV.ReadToEnd();
-            return IV;
-
-            //ToDo Logging
-        }
-
     }
 
     class md5
