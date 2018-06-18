@@ -16,6 +16,8 @@ namespace filebrowser
 #if DEBUG
             //Application.Run(new Client());
             Application.Run(new Login());
+
+            //test 2
 #else
             Application.Run(new Login());
 #endif
